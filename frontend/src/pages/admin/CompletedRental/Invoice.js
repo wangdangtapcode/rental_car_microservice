@@ -117,13 +117,14 @@ export const Invoice = () => {
     try {
       // Chuẩn bị dữ liệu gửi lên server
       const invoiceData = {
-        employee: currentUser,
+        employeeId: currentUser.id,
         paymentDate: formattedCreatedDate,
         contractVehicleDetails: selectedVehicles,
         penaltyAmount: calculation.totalPenalties,
         totalAmount: calculation.totalAmount,
         dueAmount: calculation.finalAmount,
       };
+      
       console.log("invoiceData", invoiceData);
       const response = await axios.post(
         `http://localhost:8081/api/invoice/create`,
@@ -223,10 +224,6 @@ export const Invoice = () => {
             <h3 className="text-base font-semibold mb-1 text-gray-700">
               Thông tin Hợp đồng
             </h3>
-            <p>
-              <strong>NV tạo HĐ:</strong>{" "}
-              {contractDetails.employee?.user?.fullName || "N/A"}
-            </p>
             <p className="mt-2">
               <strong>NV tạo hóa đơn:</strong>{" "}
               {currentUser?.user.fullName || "N/A"}

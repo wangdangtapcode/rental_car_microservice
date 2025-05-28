@@ -36,6 +36,14 @@ export const Sidebar = ({ isCollapsed }) => {
             </li>
             <li>
               <Link
+                to="/admin/management/vehicle"
+                className="block px-4 py-2 hover:bg-gray-700 text-md"
+              >
+                {!isCollapsed && "Vehicle Management"}
+              </Link>
+            </li>
+            <li>
+              <Link
                 to="/rental/vehicles"
                 className="block px-4 py-2 hover:bg-gray-700 text-md"
               >
@@ -49,39 +57,6 @@ export const Sidebar = ({ isCollapsed }) => {
               >
                 {!isCollapsed && "Complete Rental"}
               </Link>
-            </li>
-            <li>
-              <Link
-                to="/admin/management/vehicle"
-                className="block px-4 py-2 hover:bg-gray-700 text-md"
-              >
-                {!isCollapsed && "Complete Rental"}
-              </Link>
-            </li>
-            <li>
-              <div
-                className="flex justify-between items-center hover:bg-gray-700 cursor-pointer"
-                onClick={toggleDropdownManagement}
-              >
-                <div className=" px-4 py-2 text-md">
-                  {!isCollapsed && "Management"}
-                </div>
-                {!isCollapsed && (
-                  <RiArrowDropDownLine className="w-8 h-8 mr-2" />
-                )}
-              </div>
-              {!isCollapsed && isManagementDropdown && (
-                <ul className="pl-8 space-y-2">
-                  <li>
-                    <Link
-                      to="/admin/management/vehicle"
-                      className="block px-4 py-2 hover:bg-gray-700 text-sm"
-                    >
-                      Vehicle Management
-                    </Link>
-                  </li>
-                </ul>
-              )}
             </li>
           </ul>
         </nav>

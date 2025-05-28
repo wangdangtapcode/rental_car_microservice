@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { formatCurrency } from "../../../utils/formatters";
 import axios from "axios";
 import { useSelector } from "react-redux";
+import { decompressBase64Image } from "../../../utils/byteToBase64";
 
 export const ContractDraft = () => {
   const user = useSelector((state) => state.user.user);
@@ -190,18 +191,18 @@ export const ContractDraft = () => {
         return;
       }
 
-      apiUrl = `http://localhost:8081/api/rentalContract/create`;
+      apiUrl = `http://localhost:8083/api/rentals/create`;
       successMessage = "Thêm hợp đồng mới thành công!";
       rentalContract = {
-        customer: customer,
-        employee: user,
+        customerId: customer.id,
+        employeeId: user.id,
         depositAmount: displayValues.depositAmount,
         totalEstimatedAmount: displayValues.totalEstimatedAmount,
         dueAmount: displayValues.dueAmount,
         createdDate: formattedCreatedDate,
         status: "ACTIVE",
         contractVehicleDetails: vehiclesWithNotes.map((item) => ({
-          vehicle: item.vehicle,
+          vehicleId: item.vehicle.id,
           conditionNotes: item.conditionNotes,
           rentalPrice: item.vehicle.rentalPrice,
           startDate: item.startDate,
@@ -212,14 +213,14 @@ export const ContractDraft = () => {
         collaterals: collaterals.map((desc) => ({ description: desc })),
       };
     } else if (mode === "booking" && originalContract) {
-      apiUrl = `http://localhost:8081/api/rentalContract/update/${originalContract.id}`;
+      apiUrl = `http://localhost:8083/api/rentals/update/${originalContract.id}`;
       successMessage = `Xác nhận nhận xe cho hợp đồng ${originalContract.id} thành công!`;
       rentalContract = {
         id: originalContract.id,
-        employee: user,
+        employeeId: user.id,
         status: "ACTIVE",
         contractVehicleDetails: vehiclesWithNotes.map((item) => ({
-          vehicle: item.vehicle,
+          vehicleId: item.vehicle.id,
           conditionNotes: item.conditionNotes,
           status: "ACTIVE",
         })),
@@ -383,9 +384,13 @@ export const ContractDraft = () => {
                       );
                       return (
                         thumbnail &&
-                        thumbnail.imageUri && (
+                        thumbnail.imageData && (
                           <img
-                            src={thumbnail.imageUri}
+                            src={`data:${
+                              thumbnail.type
+                            };base64,${decompressBase64Image(
+                              thumbnail.imageData
+                            )}`}
                             alt={thumbnail.name}
                             className="w-full h-full object-cover rounded"
                           />

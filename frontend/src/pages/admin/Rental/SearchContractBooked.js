@@ -1,7 +1,9 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router";
 import axios from "axios";
-
+const USER_SERVICE_URL = "http://localhost:8081";
+const RENTAL_SERVICE_URL = "http://localhost:8083";
+const VEHICLE_SERVICE_URL = "http://localhost:8082";
 export const SearchContractBooked = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -18,24 +20,93 @@ export const SearchContractBooked = () => {
     setIsLoading(true);
     setError(null);
     setSearchResults([]);
-    setTimeout(async () => {
-      try {
-        const response = await axios.get(
-          `http://localhost:8081/api/rentalContract/search?name=${searchTerm}`
-        );
-        console.log("Response data:", response.data);
-        if (Array.isArray(response.data) && response.data.length > 0) {
-          setSearchResults(response.data);
-        } else if (response.data.length === 0) {
-          setError("Không tìm thấy hợp đồng đặt trước phù hợp.");
-          setSearchResults([]);
-        }
-      } catch (error) {
-        setError("Đã có lỗi xảy ra khi tìm kiếm.");
-      } finally {
+
+    try {
+      // --- Bước 1: Gọi UserService để lấy customerId ---
+      const userResponse = await axios.get(
+        `${USER_SERVICE_URL}/api/customers/search?fullName=${searchTerm}`
+      );
+
+      if (!userResponse.data || userResponse.data.length === 0) {
+        setError("Không tìm thấy khách hàng phù hợp.");
         setIsLoading(false);
+        return;
       }
-    }, 500);
+
+      const customerIds = userResponse.data.map((user) => user.id);
+
+      const rentalContractsPayload = customerIds.map((id) => ({
+        customerId: id,
+      }));
+
+      console.log("rentalContractsPayload", rentalContractsPayload);
+
+      const rentalResponse = await axios.post(
+        `${RENTAL_SERVICE_URL}/api/rentals/search-booked-by-customer-ids`,
+        rentalContractsPayload
+      );
+
+      console.log("rentalResponse", rentalResponse.data);
+
+      if (!rentalResponse.data || rentalResponse.data.length === 0) {
+        setError("Không tìm thấy đơn đặt trước phù hợp.");
+        setIsLoading(false);
+        return;
+      }
+
+      let rentalContracts = rentalResponse.data;
+
+      // --- Bước 3: Gọi VehicleService để lấy chi tiết xe ---
+      const allVehicleDetails = rentalContracts.flatMap(
+        (contract) => contract.contractVehicleDetails || []
+      );
+      const uniqueVehicleIds = [
+        ...new Set(
+          allVehicleDetails
+            .map((detail) => detail.vehicleId)
+            .filter((id) => id != null)
+        ),
+      ];
+      const vehicleIdsToFetch = uniqueVehicleIds.map((id) => ({
+        id: id,
+      }));
+      console.log("vehicleIdsToFetch", vehicleIdsToFetch);
+      let vehicleDetailsMap = {};
+
+      const vehicleResponse = await axios.post(
+        `${VEHICLE_SERVICE_URL}/api/vehicles/batch`,
+        vehicleIdsToFetch
+      );
+      vehicleDetailsMap = (vehicleResponse.data || []).reduce(
+        (map, vehicle) => {
+          map[vehicle.id] = vehicle;
+          return map;
+        },
+        {}
+      );
+      console.log("vehicleDetailsMap", vehicleDetailsMap);
+      // --- Bước 4: Tổng hợp dữ liệu ---
+      const populatedContracts = rentalContracts.map((contract) => ({
+        ...contract,
+        customer: userResponse.data.find((u) => u.id === contract.customerId),
+        contractVehicleDetails: (contract.contractVehicleDetails || []).map(
+          (detail) => ({
+            ...detail,
+            vehicle: vehicleDetailsMap[detail.vehicleId],
+          })
+        ),
+      }));
+      console.log("populatedContracts", populatedContracts);
+      setSearchResults(populatedContracts);
+    } catch (err) {
+      console.error("Lỗi khi tìm kiếm hợp đồng:", err);
+      setError(
+        err.response?.data?.message ||
+          "Đã có lỗi xảy ra trong quá trình tìm kiếm."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   }, [searchTerm]);
 
   const handleSelectContract = (contract) => {

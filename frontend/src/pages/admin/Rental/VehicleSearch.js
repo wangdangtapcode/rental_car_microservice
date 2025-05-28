@@ -42,7 +42,7 @@ export const VehicleSearch = () => {
         setError("Vui lòng chọn cả ngày bắt đầu và ngày kết thúc.");
         return;
       }
-      if (new Date(searchParams.startDate) >= new Date(searchParams.endDate)) {
+      if (new Date(searchParams.startDate) > new Date(searchParams.endDate)) {
         setError("Ngày bắt đầu phải trước ngày kết thúc.");
         return;
       }
@@ -52,8 +52,8 @@ export const VehicleSearch = () => {
       setAvailableVehicles([]);
 
       try {
-        const response = await axios.get(
-          "http://localhost:8081/api/vehicle/available",
+        const bookedVehiclesResponse = await axios.get(
+          "http://localhost:8083/api/rentals/contract-details/booked-vehicle-ids",
           {
             params: {
               startDate: searchParams.startDate,
@@ -61,16 +61,25 @@ export const VehicleSearch = () => {
             },
           }
         );
-        console.log(response.data);
-        const results = response.data;
+        const bookedVehicleIds = bookedVehiclesResponse.data.map((id) => ({
+          id: id,
+        }));
+        console.log("bookedVehicleIds", bookedVehicleIds);
+        const allVehiclesResponse = await axios.post(
+          `http://localhost:8082/api/vehicles/available`,
+          bookedVehicleIds
+        );
+        let allRentableVehicles = allVehiclesResponse.data || [];
+
+        console.log("allRentableVehicles", allRentableVehicles);
 
         const currentlySelectedIds = new Set(
           selectedVehicles.map((item) => item.vehicle.id)
         );
         setAvailableVehicles(
-          results.filter((v) => !currentlySelectedIds.has(v.id))
+          allRentableVehicles.filter((v) => !currentlySelectedIds.has(v.id))
         );
-        if (results.length === 0) {
+        if (allRentableVehicles.length === 0) {
           setError("Không tìm thấy xe phù hợp trong khoảng thời gian này.");
         }
       } catch (err) {
@@ -162,7 +171,7 @@ export const VehicleSearch = () => {
         break;
       }
 
-      if (new Date(vehicle.startDate) >= new Date(vehicle.endDate)) {
+      if (new Date(vehicle.startDate) > new Date(vehicle.endDate)) {
         setError(
           `Xe ${vehicle.vehicle.name} có ngày bắt đầu phải trước ngày kết thúc.`
         );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
@@ -13,8 +13,8 @@ export const VehicleManagement = () => {
     try {
       const response = await axios.get(
         searchKey
-          ? `http://localhost:8081/api/management/vehicle/search?name=${searchKey}`
-          : "http://localhost:8081/api/management/vehicle/search/all"
+          ? `http://localhost:8082/api/vehicles/search?name=${searchKey}`
+          : "http://localhost:8082/api/vehicles/search/all"
       );
       console.log(response.data);
       setVehicleList(response.data);
@@ -22,13 +22,16 @@ export const VehicleManagement = () => {
       console.error("Error fetching customer data:", error);
     }
   };
+  useEffect(() => {
+    fetchSearchVehicle();
+  }, []);
 
   const deleteCustomer = async (id) => {
     const confirm = window.confirm("Bạn có chắc chắn muốn xoá Xe này không?");
     if (!confirm) return;
     try {
       const reponse = await axios.delete(
-        `http://localhost:8081/api/management/vehicle/del/${id}`
+        `http://localhost:8082/api/vehicles/del/${id}`
       );
 
       if (reponse.data === true) {
@@ -87,6 +90,7 @@ export const VehicleManagement = () => {
             <tbody>
               {vehicleList.map((vehicle) => (
                 <tr
+                  key={vehicle.id}
                   onClick={() =>
                     navigate(`/admin/management/vehicle/detail/${vehicle.id}`, {
                       state: { vehicle },

@@ -117,7 +117,7 @@ export const AddVehicle = () => {
         console.log(pair[0] + ": ", pair[1]);
       }
       const response = await axios.post(
-        "http://localhost:8081/api/management/vehicle/add",
+        "http://localhost:8082/api/vehicles/add",
         formData
       );
       if (response.data === true) {

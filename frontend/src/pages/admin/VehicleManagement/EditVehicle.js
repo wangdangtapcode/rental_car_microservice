@@ -139,7 +139,7 @@ export const EditVehicle = () => {
         console.log(pair[0] + ": ", pair[1]);
       }
       const response = await axios.post(
-        `http://localhost:8081/api/management/vehicle/edit/${id}`,
+        `http://localhost:8082/api/vehicles/edit/${id}`,
         formData
       );
       if (response.data === true) {

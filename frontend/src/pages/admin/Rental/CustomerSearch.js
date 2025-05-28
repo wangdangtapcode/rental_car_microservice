@@ -48,7 +48,21 @@ export const CustomerSearch = () => {
           setIsSearching(false);
         }
       } else {
-        setSearchResults([]); // Xóa kết quả nếu input rỗng
+        const fetchAllCustomers = async () => {
+          try {
+            setIsSearching(true); // Có thể thêm cờ đang tải
+            const response = await axios.get(
+              `http://localhost:8081/api/customers/search/all`
+            );
+            setSearchResults(response.data);
+          } catch (err) {
+            setSearchError("Lỗi tải danh sách khách hàng.");
+            console.error(err);
+          } finally {
+            setIsSearching(false);
+          }
+        };
+        fetchAllCustomers();
       }
     }, 500); // Chờ 500ms sau khi ngừng gõ
 
@@ -60,7 +74,7 @@ export const CustomerSearch = () => {
 
     try {
       const response = await axios.get(
-        `http://localhost:8081/api/management/customer/search?fullName=${name}`
+        `http://localhost:8081/api/customers/search?fullName=${name}`
       );
 
       if (Array.isArray(response.data)) {
@@ -111,7 +125,7 @@ export const CustomerSearch = () => {
     try {
       console.log(newCustomerData);
       const response = await axios.post(
-        "http://localhost:8081/api/management/customer/add",
+        "http://localhost:8081/api/customers/add",
         newCustomerData
       );
       console.log(response.data);
@@ -217,7 +231,7 @@ export const CustomerSearch = () => {
         )}
 
         {searchResults.length > 0 && (
-          <div className="mt-3 max-h-80 overflow-y-auto border rounded">
+          <div className="mt-3 max-h-96 overflow-y-auto border rounded">
             <ul className="divide-y">
               {searchResults.map((customer) => (
                 <li

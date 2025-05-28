@@ -45,7 +45,7 @@ export const Topbar = ({ toggleSidebar }) => {
               {isClickedUserIcon && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-20">
                   <div className="py-2 px-4 text-gray-700">
-                    👤 {user.user?.fullName || "Người dùng"}
+                    👤 {user?.user?.fullName || "Người dùng"}
                   </div>
                   <div className="py-2 px-4 text-gray-700 hover:bg-gray-100 cursor-pointer">
                     Cài đặt

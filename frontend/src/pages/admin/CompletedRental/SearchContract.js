@@ -1,7 +1,9 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-
+const USER_SERVICE_URL = "http://localhost:8081";
+const RENTAL_SERVICE_URL = "http://localhost:8083";
+const VEHICLE_SERVICE_URL = "http://localhost:8082";
 export const SearchContractPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -20,16 +22,84 @@ export const SearchContractPage = () => {
     setSearchResults([]);
 
     try {
-      const response = await axios.get(
-        `http://localhost:8081/api/rentalContract/completedRental/search?name=${searchTerm}`
-      );
-      const relevantContracts = response.data || [];
-      console.log(relevantContracts);
-      setSearchResults(relevantContracts);
+      // --- Bước 1: Gọi UserService để lấy customerId ---
 
-      if (relevantContracts.length === 0) {
-        setError("Không tìm thấy hợp đồng nào phù hợp.");
+      const userResponse = await axios.get(
+        `${USER_SERVICE_URL}/api/customers/search?fullName=${searchTerm}`
+      );
+      if (!userResponse.data || userResponse.data.length === 0) {
+        setError("Không tìm thấy khách hàng phù hợp.");
+        setIsLoading(false);
+        return;
       }
+
+      const customerIds = userResponse.data.map((user) => user.id);
+      // --- Bước 2: --------------------------------- ---
+
+      const rentalContractsPayload = customerIds.map((id) => ({
+        customerId: id,
+      }));
+
+      console.log("rentalContractsPayload", rentalContractsPayload);
+
+      const rentalResponse = await axios.post(
+        `${RENTAL_SERVICE_URL}/api/rentals/search-active-by-customer-ids`,
+        rentalContractsPayload
+      );
+
+      console.log("rentalResponse", rentalResponse.data);
+
+      if (!rentalResponse.data || rentalResponse.data.length === 0) {
+        setError("Không tìm thấy hợp đồng phù hợp.");
+        setIsLoading(false);
+        return;
+      }
+
+      let rentalContracts = rentalResponse.data;
+
+      // --- Bước 3: Gọi VehicleService để lấy chi tiết xe ---
+      const allVehicleDetails = rentalContracts.flatMap(
+        (contract) => contract.contractVehicleDetails || []
+      );
+      const uniqueVehicleIds = [
+        ...new Set(
+          allVehicleDetails
+            .map((detail) => detail.vehicleId)
+            .filter((id) => id != null)
+        ),
+      ];
+      const vehicleIdsToFetch = uniqueVehicleIds.map((id) => ({
+        id: id,
+      }));
+      console.log("vehicleIdsToFetch", vehicleIdsToFetch);
+      let vehicleDetailsMap = {};
+
+      const vehicleResponse = await axios.post(
+        `${VEHICLE_SERVICE_URL}/api/vehicles/batch`,
+        vehicleIdsToFetch
+      );
+      vehicleDetailsMap = (vehicleResponse.data || []).reduce(
+        (map, vehicle) => {
+          map[vehicle.id] = vehicle;
+          return map;
+        },
+        {}
+      );
+      console.log("vehicleDetailsMap", vehicleDetailsMap);
+      // --- Bước 4: Tổng hợp dữ liệu ---
+      const populatedContracts = rentalContracts.map((contract) => ({
+        ...contract,
+        customer: userResponse.data.find((u) => u.id === contract.customerId),
+        contractVehicleDetails: (contract.contractVehicleDetails || []).map(
+          (detail) => ({
+            ...detail,
+            penalties: [],
+            vehicle: vehicleDetailsMap[detail.vehicleId],
+          })
+        ),
+      }));
+      console.log("populatedContracts", populatedContracts);
+      setSearchResults(populatedContracts);
     } catch (err) {
       console.error("Lỗi tìm kiếm hợp đồng:", err);
       setError(err.response?.data?.message || "Lỗi kết nối hoặc hệ thống.");

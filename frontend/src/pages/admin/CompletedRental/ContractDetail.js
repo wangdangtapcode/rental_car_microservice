@@ -31,7 +31,7 @@ export const ContractDetailPage = () => {
       }
 
       const penaltyResp = await axios.get(
-        "http://localhost:8081/api/penalty-types/all"
+        "http://localhost:8084/api/payments/penalty-rules/all"
       );
       const typesData = penaltyResp.data;
 
@@ -277,12 +277,6 @@ export const ContractDetailPage = () => {
               >
                 {contractDetails.status}
               </span>
-            </p>
-            <p>
-              <span className="font-semibold text-gray-600">
-                Nhân viên tạo:
-              </span>{" "}
-              {contractDetails.employee?.user?.fullName || "N/A"}
             </p>
             <p>
               <span className="font-semibold text-gray-600">Ngày tạo:</span>{" "}
