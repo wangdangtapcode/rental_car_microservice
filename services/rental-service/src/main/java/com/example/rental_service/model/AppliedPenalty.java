@@ -1,4 +1,5 @@
-package com.example.payment_service.model;
+package com.example.rental_service.model;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -19,12 +20,13 @@ public class AppliedPenalty {
     private Float penaltyAmount;
     private String note;
 
-    @Column(name = "contract_vehicle_detail_id", nullable = false)
-    private Long contractVehicleDetailId;
+    @ManyToOne
+    @JoinColumn(name = "contract_vehicle_detail_id")
+    @JsonIgnore
+    private ContractVehicleDetail contractVehicleDetail;
 
     @ManyToOne()
     @JoinColumn(name = "penalty_rule_id", nullable = false)
-    @JsonIgnore
     private PenaltyRule penaltyRule;
 
 }

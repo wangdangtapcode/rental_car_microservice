@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "contract_vehicle_details") // Tên bảng trong DB
@@ -35,6 +36,6 @@ public class ContractVehicleDetail {
     @JsonIgnore
     private RentalContract rentalContract;
 
-    // invoice_id sẽ được quản lý bởi PaymentService nếu cần tham chiếu ngược
-    // Hoặc PaymentService sẽ lưu contract_vehicle_detail_id
+    @OneToMany(mappedBy = "contractVehicleDetail", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<AppliedPenalty> appliedPenalties;
 }

@@ -31,7 +31,7 @@ export const ContractDetailPage = () => {
       }
 
       const penaltyResp = await axios.get(
-        "http://localhost:8084/api/payments/penalty-rules/all"
+        "http://localhost:8083/api/rentals/penalty-rules/all"
       );
       const typesData = penaltyResp.data;
 

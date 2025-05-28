@@ -119,19 +119,39 @@ export const Invoice = () => {
       const invoiceData = {
         employeeId: currentUser.id,
         paymentDate: formattedCreatedDate,
-        contractVehicleDetails: selectedVehicles,
-        penaltyAmount: calculation.totalPenalties,
-        totalAmount: calculation.totalAmount,
+        totalPenaltyAmount: calculation.totalPenalties,
+        totalRentAmount: calculation.totalAmount,
         dueAmount: calculation.finalAmount,
       };
-      
+
       console.log("invoiceData", invoiceData);
-      const response = await axios.post(
-        `http://localhost:8081/api/invoice/create`,
+
+      const invoiceResponse = await axios.post(
+        `http://localhost:8084/api/payments/invoice/create`,
         invoiceData
       );
-
-      if (response.data === "Tạo hóa đơn thành công") {
+      if (!invoiceResponse.data) {
+        setError("Lỗi: Không thể tạo hóa đơn.");
+        setIsCreatingInvoice(false);
+        return;
+      }
+      const contract = {
+        id: contractDetails.id,
+        contractVehicleDetails: selectedVehicles.map((vehicle) => ({
+          id: vehicle.id,
+          invoiceId: invoiceResponse.data,
+          appliedPenalties: vehicle.penalties.map((penalty) => ({
+            ...penalty,
+            penaltyRule: penalty.penaltyType,
+          })),
+        })),
+      };
+      console.log("contract", contract);
+      const contractResponse = await axios.post(
+        `http://localhost:8083/api/rentals/update-from-invoice`,
+        contract
+      );
+      if (contractResponse.data) {
         alert("Thêm hoá đơn thành công!");
         navigate("/completedRental");
       } else {
