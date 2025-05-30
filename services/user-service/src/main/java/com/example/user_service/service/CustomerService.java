@@ -26,26 +26,16 @@ public class CustomerService {
         Customer customer = new Customer();
         customer.setUser(customerData);
 
-        customerRepository.save(customer);
-
         return customerRepository.save(customer);
     }
     @Transactional
     public List<Customer> findByUserFullName(String fullName) {
         List<Customer> customers = customerRepository.findByUserFullNameContainingIgnoreCase(fullName);
-        List<Customer> customerList = new ArrayList<>();
-        for (Customer customer : customers) {
-            customerList.add(customer);
-        }
-        return customerList;
+        return customers;
     }
     @Transactional
     public List<Customer> findAll() {
         List<Customer> customers = customerRepository.findTop20ByOrderByIdAsc();
-        List<Customer> customerList = new ArrayList<>();
-        for (Customer customer : customers) {
-            customerList.add(customer);
-        }
-        return customerList;
+        return customers;
     }
 }

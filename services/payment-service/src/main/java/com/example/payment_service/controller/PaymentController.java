@@ -19,4 +19,8 @@ public class PaymentController {
         return paymentService.createInvoice(invoiceData);
 
     }
+    @DeleteMapping(value = "/invoice/{id}")
+    public boolean deleteInvoice(@PathVariable Long id) {
+        return paymentService.deleteInvoice(id);
+    }
 }

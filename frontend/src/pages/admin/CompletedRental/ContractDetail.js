@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { useSelector } from "react-redux";
+import { decompressBase64Image } from "../../../utils/byteToBase64";
 
 export const ContractDetailPage = () => {
   const currentUser = useSelector((state) => state.user.user);
@@ -399,13 +400,32 @@ export const ContractDetailPage = () => {
               <div className="col-span-1">
                 {vehicleDetail.vehicle?.vehicleImages &&
                 vehicleDetail.vehicle.vehicleImages.length > 0 ? (
-                  <div className="relative h-48 rounded-lg overflow-hidden">
-                    <img
-                      src={vehicleDetail.vehicle.vehicleImages[0].imageUri}
-                      alt={vehicleDetail.vehicle.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                  (() => {
+                    const thumbnail = vehicleDetail.vehicle.vehicleImages.find(
+                      (img) => img.isThumbnail
+                    );
+                    if (thumbnail && thumbnail.imageData) {
+                      return (
+                        <div className="relative h-48 rounded-lg overflow-hidden">
+                          <img
+                            src={`data:${
+                              thumbnail.type
+                            };base64,${decompressBase64Image(
+                              thumbnail.imageData
+                            )}`}
+                            alt={vehicleDetail.vehicle.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <span className="text-gray-400">Không có ảnh</span>
+                        </div>
+                      );
+                    }
+                  })()
                 ) : (
                   <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center">
                     <span className="text-gray-400">Không có ảnh</span>

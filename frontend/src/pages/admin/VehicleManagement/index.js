@@ -5,6 +5,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { FaRegEdit } from "react-icons/fa";
 import { AiOutlineDelete } from "react-icons/ai";
+import { decompressBase64Image } from "../../../utils/byteToBase64";
 export const VehicleManagement = () => {
   const navigate = useNavigate();
   const [searchKey, setSearchKey] = useState("");
@@ -108,10 +109,14 @@ export const VehicleManagement = () => {
                         );
                         return (
                           thumbnail &&
-                          thumbnail.imageUri && (
+                          thumbnail.imageData && (
                             <img
-                              src={thumbnail.imageUri}
-                              alt={vehicle.name}
+                              src={`data:${
+                                thumbnail.type
+                              };base64,${decompressBase64Image(
+                                thumbnail.imageData
+                              )}`}
+                              alt={thumbnail.name}
                               className="w-20 h-20 object-cover"
                             />
                           )

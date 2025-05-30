@@ -37,25 +37,11 @@ public class VehicleService {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     public List<Vehicle> findByName(String name) {
         List<Vehicle> vehicles = vehicleRepository.findFirst20ByNameContainingIgnoreCase(name);
-        for (Vehicle vehicle : vehicles) {
-            for (VehicleImage vehicleImage : vehicle.getVehicleImages()) {
-                String imgBase64 = ImageUtils.encodeToBase64(vehicleImage.getImageData());
-                String imageUri = "data:" + vehicleImage.getType() + ";base64," + imgBase64;
-                vehicleImage.setImageUri(imageUri);
-            }
-        }
         return vehicles;
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     public List<Vehicle> findAll() {
         List<Vehicle> vehicles = vehicleRepository.findTop20ByOrderByIdAsc();
-        for (Vehicle vehicle : vehicles) {
-            for (VehicleImage vehicleImage : vehicle.getVehicleImages()) {
-                String imgBase64 = ImageUtils.encodeToBase64(vehicleImage.getImageData());
-                String imageUri = "data:" + vehicleImage.getType() + ";base64," + imgBase64;
-                vehicleImage.setImageUri(imageUri);
-            }
-        }
         return vehicles;
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -78,8 +64,8 @@ public class VehicleService {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     @Transactional
-    public Boolean editVehicle(Long id, Vehicle vehicle) {
-        Optional<Vehicle> optionalVehicle = vehicleRepository.findById(id);
+    public Boolean editVehicle(Vehicle vehicle) {
+        Optional<Vehicle> optionalVehicle = vehicleRepository.findById(vehicle.getId());
         if (optionalVehicle.isPresent()) {
             Vehicle existingVehicle = optionalVehicle.get();
 
@@ -133,7 +119,7 @@ public class VehicleService {
                 return false;
             }
         } else {
-            throw new RuntimeException("Vehicle not found with id: " + id);
+            throw new RuntimeException("Vehicle not found with id: " + vehicle.getId());
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router";
 import { useState, useCallback } from "react";
 import axios from "axios";
 import { formatCurrency } from "../../../utils/formatters";
+import { decompressBase64Image } from "../../../utils/byteToBase64";
 
 export const VehicleSearch = () => {
   const location = useLocation();
@@ -197,10 +198,12 @@ export const VehicleSearch = () => {
   const getThumbnailImage = (vehicle) => {
     if (vehicle.vehicleImages && vehicle.vehicleImages.length > 0) {
       const thumbnail = vehicle.vehicleImages.find((img) => img.isThumbnail);
-      if (thumbnail && thumbnail.imageUri) {
+      if (thumbnail && thumbnail.imageData) {
         return (
           <img
-            src={thumbnail.imageUri}
+            src={`data:${thumbnail.type};base64,${decompressBase64Image(
+              thumbnail.imageData
+            )}`}
             alt={vehicle.name}
             className="w-full h-32 object-cover rounded mb-2"
           />

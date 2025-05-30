@@ -2,6 +2,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { useLocation } from "react-router-dom";
+import { decompressBase64Image } from "../../../utils/byteToBase64";
 
 export const EditVehicle = () => {
   const navigate = useNavigate();
@@ -20,7 +21,9 @@ export const EditVehicle = () => {
           id: img.id,
           name: img.name,
           type: img.type,
-          url: img.imageUri ?? "",
+          url: img.imageData
+            ? `data:${img.type};base64,${decompressBase64Image(img.imageData)}`
+            : "",
           isThumbnail: img.isThumbnail,
           file: null, // vì không có file thực khi load từ backend
         })),

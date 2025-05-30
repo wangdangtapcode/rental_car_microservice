@@ -12,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class RentalService {
@@ -24,76 +27,77 @@ public class RentalService {
     private PenaltyRuleRepository penaltyRuleRepository;
 
     @Transactional
-    public boolean updateFromInvoice(RentalContract rentalContract) {
+    public boolean updateFromInvoice(RentalContract contractUpdates) {
         try {
-
-            // Lấy danh sách ID xe cần tạo hóa đơn
-            List<ContractVehicleDetail> contractVehicleDetails = rentalContract.getContractVehicleDetails();
-            if (contractVehicleDetails == null || contractVehicleDetails.isEmpty()) {
-                throw new RuntimeException("Không có xe nào được chọn để tạo hóa đơn");
+            // 1. Kiểm tra đầu vào: Danh sách chi tiết xe cần cập nhật
+            List<ContractVehicleDetail> vehicleUpdateDetails = contractUpdates.getContractVehicleDetails();
+            if (vehicleUpdateDetails == null || vehicleUpdateDetails.isEmpty()) {
+                throw new IllegalArgumentException("Không có xe nào được chọn để cập nhật từ hóa đơn.");
             }
 
-            List<ContractVehicleDetail> contractVehicleDetailList = new ArrayList<>();
-            RentalContract contract = rentalContractRepository.findById(rentalContract.getId())
-                    .orElseThrow(() -> new RuntimeException("Contract not found"));
+            // 2. Lấy đối tượng hợp đồng (RentalContract) đang tồn tại từ cơ sở dữ liệu
+            RentalContract persistentContract = rentalContractRepository.findById(contractUpdates.getId())
+                    .orElseThrow(() -> new EntityNotFoundException("Hợp đồng không tìm thấy với ID: " + contractUpdates.getId()));
 
-            // Xử lý từng xe
-            for (ContractVehicleDetail contractVehicleDetail : contractVehicleDetails) {
-                // Tìm chi tiết xe thuê
-                ContractVehicleDetail vehicleDetail = null;
-                for (ContractVehicleDetail detail : contract.getContractVehicleDetails()) {
-                    if (detail.getId().equals(contractVehicleDetail.getId())) {
-                        vehicleDetail = detail;
-                        break;
-                    }
-                }
+            // 3. Để tra cứu chi tiết xe hiệu quả, chuyển danh sách chi tiết xe của hợp đồng đang có thành Map
+            // key là ID của ContractVehicleDetail, value là chính đối tượng đó.
+            Map<Long, ContractVehicleDetail> persistentVehicleDetailsMap = persistentContract.getContractVehicleDetails()
+                    .stream()
+                    .collect(Collectors.toMap(ContractVehicleDetail::getId, Function.identity()));
 
-                if (vehicleDetail == null) {
+            // 4. Xử lý từng chi tiết xe được yêu cầu cập nhật
+            for (ContractVehicleDetail updateInfo : vehicleUpdateDetails) {
+                // Lấy chi tiết xe tương ứng từ hợp đồng đã tải bằng ID
+                ContractVehicleDetail targetVehicleDetail = persistentVehicleDetailsMap.get(updateInfo.getId());
+
+                if (targetVehicleDetail == null) {
                     throw new EntityNotFoundException(
-                            "Không tìm thấy chi tiết xe thuê với ID: " + contractVehicleDetail.getId());
+                            "Chi tiết xe thuê (ID: " + updateInfo.getId() + ") không tồn tại trong hợp đồng (ID: " + persistentContract.getId() + ").");
                 }
 
-                // Kiểm tra trạng thái xe
-                if (!"ACTIVE".equals(vehicleDetail.getStatus())) {
-                    throw new RuntimeException(
-                            "Xe " + vehicleDetail.getVehicleId() + " không ở trạng thái hợp lệ để tạo hóa đơn");
+                // 5. Kiểm tra trạng thái xe trước khi cập nhật (sử dụng hằng số)
+                if (!"ACTIVE".equals(targetVehicleDetail.getStatus())) { // Thay thế "ACTIVE" bằng STATUS_ACTIVE
+                    throw new IllegalStateException(
+                            "Xe " + targetVehicleDetail.getVehicleId() + " không ở trạng thái 'ACTIVE' để cập nhật từ hóa đơn.");
                 }
 
-                // Cập nhật ngày trả thực tế
-                LocalDate actualReturnDate = contractVehicleDetail.getActualReturnDate();
-                vehicleDetail.setActualReturnDate(actualReturnDate);
-                vehicleDetail.getAppliedPenalties().clear();
-                for (AppliedPenalty penalty : contractVehicleDetail.getAppliedPenalties()) {
-                    vehicleDetail.getAppliedPenalties().add(penalty);
-                    penalty.setContractVehicleDetail(vehicleDetail);
-                }
-                // Cập nhật trạng thái xe
-                vehicleDetail.setStatus("COMPLETED");
+                // 6. Áp dụng các thay đổi vào chi tiết xe đang có
+                targetVehicleDetail.setActualReturnDate(updateInfo.getActualReturnDate());
+                targetVehicleDetail.setInvoiceId(updateInfo.getInvoiceId()); // Giả sử invoiceId đến từ updateInfo
 
-                // Thêm xe vào danh sách xe của hóa đơn
-                vehicleDetail.setInvoiceId(contractVehicleDetail.getInvoiceId());
-
-                contractVehicleDetailList.add(vehicleDetail);
-
-                // Kiểm tra và cập nhật trạng thái hợp đồng
-                boolean allCompleted = true;
-                for (ContractVehicleDetail detail : contract.getContractVehicleDetails()) {
-                    if (!"COMPLETED".equals(detail.getStatus())) {
-                        allCompleted = false;
-                        break;
+                // Cập nhật danh sách các hình phạt (AppliedPenalty)
+                targetVehicleDetail.getAppliedPenalties().clear(); // Xóa các hình phạt cũ
+                if (updateInfo.getAppliedPenalties() != null) {
+                    for (AppliedPenalty newPenalty : updateInfo.getAppliedPenalties()) {
+                        newPenalty.setContractVehicleDetail(targetVehicleDetail); // Thiết lập quan hệ hai chiều
+                        targetVehicleDetail.getAppliedPenalties().add(newPenalty);
                     }
                 }
 
-                if (allCompleted) {
-                    contract.setStatus("COMPLETED");
-                    rentalContractRepository.save(contract);
-                }
-
+                targetVehicleDetail.setStatus("COMPLETED"); // Thay thế "COMPLETED" bằng STATUS_COMPLETED
             }
+
+            // 7. Sau khi cập nhật tất cả chi tiết xe, kiểm tra xem toàn bộ hợp đồng có thể đánh dấu là HOÀN THÀNH không
+            boolean allContractVehiclesCompleted = persistentContract.getContractVehicleDetails().stream()
+                    .allMatch(detail -> "COMPLETED".equals(detail.getStatus())); // Sử dụng STATUS_COMPLETED
+
+            if (allContractVehiclesCompleted) {
+                persistentContract.setStatus("COMPLETED"); // Sử dụng STATUS_COMPLETED
+            }
+
+            // 8. Lưu thay đổi vào cơ sở dữ liệu
+            rentalContractRepository.save(persistentContract);
             return true;
+
+        } catch (IllegalArgumentException | EntityNotFoundException | IllegalStateException e) {
+            // Ghi log các lỗi nghiệp vụ cụ thể, có thể dự đoán được
+            System.err.println("Lỗi cập nhật hóa đơn do vi phạm quy tắc nghiệp vụ: " + e.getMessage());
+            // e.printStackTrace(); // Tùy thuộc vào chiến lược ghi log cho lỗi nghiệp vụ
+            return false;
         } catch (Exception e) {
-            System.err.println("Lỗi khi tạo hóa đơn: " + e.getMessage());
-            e.printStackTrace();
+            // Ghi log các lỗi không mong muốn khác
+            System.err.println("Lỗi không mong muốn khi cập nhật từ hóa đơn: " + e.getMessage());
+            e.printStackTrace(); // Quan trọng để debug các vấn đề không lường trước
             return false;
         }
     }

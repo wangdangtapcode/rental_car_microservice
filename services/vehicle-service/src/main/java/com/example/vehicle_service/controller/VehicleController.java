@@ -61,7 +61,6 @@ public class VehicleController {
 
     @PostMapping(value = "/edit/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public boolean editVehicle(
-            @PathVariable("id") Long id,
             @RequestParam("vehicle") String vehicleJson,
             @RequestParam(value = "vehicleImages", required = false) List<MultipartFile> imageFiles)
             throws IOException {
@@ -91,7 +90,7 @@ public class VehicleController {
             }
         }
 
-        return vehicleService.editVehicle(id, vehicle);
+        return vehicleService.editVehicle(vehicle);
     }
 
     @DeleteMapping(value = "/del/{id}")

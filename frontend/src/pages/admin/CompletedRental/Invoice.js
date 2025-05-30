@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { useSelector } from "react-redux";
+import { decompressBase64Image } from "../../../utils/byteToBase64";
 
 export const Invoice = () => {
   const navigate = useNavigate();
@@ -140,6 +141,7 @@ export const Invoice = () => {
         contractVehicleDetails: selectedVehicles.map((vehicle) => ({
           id: vehicle.id,
           invoiceId: invoiceResponse.data,
+          actualReturnDate: vehicle.actualReturnDate,
           appliedPenalties: vehicle.penalties.map((penalty) => ({
             ...penalty,
             penaltyRule: penalty.penaltyType,
@@ -155,7 +157,16 @@ export const Invoice = () => {
         alert("Thêm hoá đơn thành công!");
         navigate("/completedRental");
       } else {
-        alert("Thêm hoá đơn thất bại!");
+        const delInvoiceResponse = await axios.delete(
+          `http://localhost:8084/api/payments/invoice/${invoiceResponse.data}`
+        );
+        if (!delInvoiceResponse.data) {
+          alert(
+            "Rollback khi thêm hoá đơn thành công nhưng khi cập nhật rentalservice thất bại"
+          );
+        } else {
+          alert("Thêm hoá đơn thất bại!");
+        }
       }
     } catch (err) {
       let errorMsg = "Đã xảy ra lỗi trong quá trình tạo hóa đơn.";
@@ -271,13 +282,34 @@ export const Invoice = () => {
                     <div className="col-span-1">
                       {vd.vehicle?.vehicleImages &&
                       vd.vehicle.vehicleImages.length > 0 ? (
-                        <div className="relative h-48 rounded-lg overflow-hidden">
-                          <img
-                            src={vd.vehicle.vehicleImages[0].imageUri}
-                            alt={vd.vehicle.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
+                        (() => {
+                          const thumbnail = vd.vehicle.vehicleImages.find(
+                            (img) => img.isThumbnail
+                          );
+                          if (thumbnail && thumbnail.imageData) {
+                            return (
+                              <div className="relative h-48 rounded-lg overflow-hidden">
+                                <img
+                                  src={`data:${
+                                    thumbnail.type
+                                  };base64,${decompressBase64Image(
+                                    thumbnail.imageData
+                                  )}`}
+                                  alt={vd.vehicle.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center">
+                                <span className="text-gray-400">
+                                  Không có ảnh
+                                </span>
+                              </div>
+                            );
+                          }
+                        })()
                       ) : (
                         <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center">
                           <span className="text-gray-400">Không có ảnh</span>
