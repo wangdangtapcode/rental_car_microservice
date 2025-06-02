@@ -118,7 +118,7 @@ export const AddVehicle = () => {
       }
       const response = await axios.post(
         "http://localhost:8082/api/vehicles/add",
-        formData,
+        formData
       );
       if (response.data === true) {
         alert("Xe đã được thêm!");

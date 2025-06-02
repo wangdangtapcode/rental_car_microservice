@@ -1,16 +1,173 @@
-version: '3.8'
+version: "3.8"
+
 services:
-  service-a:
-    build: ./services/service-a
+  # User Service and Database
+  user-db:
+    image: mysql:8.0
+    container_name: user_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: user_service_db
+    volumes:
+      - user_db_data:/var/lib/mysql
+      - ./scripts/user_insert.sql:/docker-entrypoint-initdb.d/user_insert.sql # Cập nhật đường dẫn
     ports:
-      - "5001:5000"
+      - "3307:3306" # Host:Container
+    networks:
+      - rental_network
 
-  service-b:
-    build: ./services/service-b
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: user_service
+    restart: unless-stopped
+    depends_on:
+      - user-db
     ports:
-      - "5002:5000"
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://user-db:3306/user_service_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8081
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - rental_network
 
-  gateway:
-    build: ./gateway
+  # Vehicle Service and Database
+  vehicle-db:
+    image: mysql:8.0
+    container_name: vehicle_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: vehicle_service_db
+    volumes:
+      - vehicle_db_data:/var/lib/mysql
+      - ./scripts/vehicle_insert.sql:/docker-entrypoint-initdb.d/vehicle_insert.sql # Cập nhật đường dẫn
     ports:
-      - "8080:8000"
+      - "3308:3306"
+    networks:
+      - rental_network
+
+  vehicle-service:
+    build:
+      context: ./services/vehicle-service
+      dockerfile: Dockerfile
+    container_name: vehicle_service
+    restart: unless-stopped
+    depends_on:
+      - vehicle-db
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://vehicle-db:3306/vehicle_service_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8082
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - rental_network
+
+  # Rental Service and Database
+  rental-db:
+    image: mysql:8.0
+    container_name: rental_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: rental_service_db
+    volumes:
+      - rental_db_data:/var/lib/mysql
+      - ./scripts/rental_insert.sql:/docker-entrypoint-initdb.d/rental_insert.sql # Cập nhật đường dẫn
+    ports:
+      - "3309:3306"
+    networks:
+      - rental_network
+
+  rental-service:
+    build:
+      context: ./services/rental-service
+      dockerfile: Dockerfile
+    container_name: rental_service
+    restart: unless-stopped
+    depends_on:
+      - rental-db
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://rental-db:3306/rental_service_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8083
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - rental_network
+
+  # Payment Service and Database
+  payment-db:
+    image: mysql:8.0
+    container_name: payment_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: payment_service_db
+    volumes:
+      - payment_db_data:/var/lib/mysql
+      - ./scripts/payment_insert.sql:/docker-entrypoint-initdb.d/payment_insert.sql # Cập nhật đường dẫn
+    ports:
+      - "3310:3306"
+    networks:
+      - rental_network
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+    container_name: payment_service
+    restart: unless-stopped
+    depends_on:
+      - payment-db
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://payment-db:3306/payment_service_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8084
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - rental_network
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend_service
+    restart: unless-stopped
+    ports:
+      - "3000:80" # Host:Container (Nginx trong container chạy ở cổng 80)
+    # depends_on: # Không còn phụ thuộc vào gateway
+    #   - user-service # Có thể thêm phụ thuộc vào các backend nếu muốn đảm bảo backend khởi động trước, nhưng không bắt buộc cho kết nối HTTP
+    #   - vehicle-service
+    #   - rental-service
+    #   - payment-service
+    networks:
+      - rental_network
+
+volumes:
+  user_db_data:
+  vehicle_db_data:
+  rental_db_data:
+  payment_db_data:
+
+networks:
+  rental_network:
+    driver: bridge
